@@ -3,32 +3,42 @@ package main
 import (
 	"context" // Context is available in the main lib from v1.7
 	"fmt"
+	"log" // For panic func, might delete later
 	"os"
 
 	"cloud.google.com/go/translate"
 	"github.com/nlopes/slack"
 	"golang.org/x/text/language"
+	"google.golang.org/api/option"
 )
 
 func main() {
 	fmt.Println("Starting up slackbot")
-	slack_token := os.Getenv("Slack_TOKEN")
+	token := os.Getenv("SLACK_TOKEN")
+	api := slack.New(token)
 	rtm := api.NewRTM()
 
 	ctx := context.Background()
-	client, err := translate.NewClient(ctx, opts)
+	// TODO: any way to avoid absolut paths??
+	client, err := translate.NewClient(ctx, option.WithServiceAccountFile("/Users/joshk/.keys/keyfile.json"))
 	if err != nil {
-		fmt.Println("Fatal error: %s", err)
-		Panic
+		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
 	}
-	select {
-	case msg := <-rtm.IncomingEvents:
-		ev := msg.Data.(type)
 
-		switch ev {
-		case *slack.MessageEvent:
-			info := rtm.GetInfo()
-			fmt.Sprintf("%s", info.User.ID)
-		}
+	// What's the diff between ctx and context??
+	trns, err := client.Translate(ctx,
+		[]string{"この翻訳はどうだろう？うまくいけるのかな？"},
+		language.English,
+		&translate.Options{
+			Source: language.Japanese,
+			Format: translate.Text,
+		})
+
+	if err != nil {
+		fmt.Println("Could not translate")
 	}
+
+	fmt.Println(trns[0].Text)
+
+	rtm.SendMessage(rtm.NewOutgoingMessage(trns[0].Text, "#general"))
 }
