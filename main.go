@@ -70,10 +70,12 @@ Loop:
 
 func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string, client *translate.Client) {
 
-	// What's the diff between ctx and context??
+	// Remove unneeded @mention string
+	targetStr := strings.TrimPrefix(msg.Text, prefix)
+
 	trns, err := client.Translate(
 		ctx,
-		[]string{msg.Text},
+		[]string{targetStr},
 		language.Japanese,
 		&translate.Options{
 			Source: language.English,
