@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log" // For panic func, might delete later
 	"os"
+	"strings"
 
 	"cloud.google.com/go/translate"
 	"github.com/nlopes/slack"
@@ -12,25 +13,70 @@ import (
 	"google.golang.org/api/option"
 )
 
+var ctx context.Context
+
 func main() {
+	// Set up Slack part
 	fmt.Println("Starting up slackbot")
 	token := os.Getenv("SLACK_TOKEN")
 	api := slack.New(token)
 	rtm := api.NewRTM()
+	go rtm.ManageConnection()
 
-	ctx := context.Background()
+	// Set up google translate part
+	fmt.Println("Starting up translation service")
+	ctx = context.Background() //This might not be the right way to initialize
 	// TODO: any way to avoid absolut paths??
+	//var err error //This feels like a hack, but it's to allow the statement below to work
+	// with the globally defined "client" rather than creating a new one
 	client, err := translate.NewClient(ctx, option.WithServiceAccountFile("/Users/joshk/.keys/keyfile.json"))
 	if err != nil {
 		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
 	}
 
+	// main logic loop
+Loop:
+	for {
+		select {
+		case msg := <-rtm.IncomingEvents:
+			fmt.Print("Event received")
+			switch ev := msg.Data.(type) {
+
+			case *slack.ConnectedEvent:
+				fmt.Println("Connection counter:", ev.ConnectionCount)
+
+			case *slack.MessageEvent:
+				fmt.Printf("Message: %v\n", ev)
+				info := rtm.GetInfo()
+				prefix := fmt.Sprintf("<@%s>", info.User.ID)
+
+				if ev.User != info.User.ID && strings.HasPrefix(ev.Text, prefix) {
+					respond(rtm, ev, prefix, client)
+				}
+
+			case *slack.RTMError:
+				fmt.Printf("Error: %s\n", ev.Error())
+
+			case *slack.InvalidAuthEvent:
+				fmt.Printf("Invalid slack credentials")
+				break Loop
+
+			default:
+				// Do nothing
+			}
+		}
+	}
+}
+
+func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string, client *translate.Client) {
+
 	// What's the diff between ctx and context??
-	trns, err := client.Translate(ctx,
-		[]string{"この翻訳はどうだろう？うまくいけるのかな？"},
-		language.English,
+	trns, err := client.Translate(
+		ctx,
+		[]string{msg.Text},
+		language.Japanese,
 		&translate.Options{
-			Source: language.Japanese,
+			Source: language.English,
 			Format: translate.Text,
 		})
 
@@ -38,7 +84,7 @@ func main() {
 		fmt.Println("Could not translate")
 	}
 
-	fmt.Println(trns[0].Text)
-
-	rtm.SendMessage(rtm.NewOutgoingMessage(trns[0].Text, "#general"))
+	trnsReply := trns[0].Text
+	fmt.Println(trnsReply)
+	rtm.SendMessage(rtm.NewOutgoingMessage(trnsReply, msg.Channel))
 }
