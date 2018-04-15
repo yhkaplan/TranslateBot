@@ -1,5 +1,5 @@
 # TranslateBot
-A simple SlackBot that translates English text to Japanese. I plan on making it detect language and so forth.
+A simple SlackBot that translates English text to Japanese and any other language to English.
 
 ## Todo
 - [ ] Deploy to heroku with Docker
