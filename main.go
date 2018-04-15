@@ -27,7 +27,7 @@ func main() {
 	fmt.Println("Starting up translation service")
 	ctx = context.Background()
 	// TODO: any way to avoid absolut paths??
-	client, err := translate.NewClient(ctx, option.WithServiceAccountFile("/Users/joshk/.keys/keyfile.json"))
+	client, err := translate.NewClient(ctx, option.WithCredentialsFile("/Users/joshk/.keys/keyfile.json"))
 	if err != nil {
 		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
 	}
