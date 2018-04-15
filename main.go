@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log" // For panic func, might delete later
 	"os"
+	"os/user"
 	"strings"
 
 	"cloud.google.com/go/translate"
@@ -26,8 +27,12 @@ func main() {
 	// Set up google translate part
 	fmt.Println("Starting up translation service")
 	ctx = context.Background()
-	// TODO: any way to avoid absolut paths??
-	client, err := translate.NewClient(ctx, option.WithCredentialsFile("/Users/joshk/.keys/keyfile.json"))
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal(err)
+	}
+	path := usr.HomeDir + "/.keys/keyfile.json"
+	client, err := translate.NewClient(ctx, option.WithCredentialsFile(path))
 	if err != nil {
 		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
 	}
