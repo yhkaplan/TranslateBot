@@ -25,17 +25,15 @@ func main() {
 
 	// Set up google translate part
 	fmt.Println("Starting up translation service")
-	ctx = context.Background() //This might not be the right way to initialize
+	ctx = context.Background()
 	// TODO: any way to avoid absolut paths??
-	//var err error //This feels like a hack, but it's to allow the statement below to work
-	// with the globally defined "client" rather than creating a new one
 	client, err := translate.NewClient(ctx, option.WithServiceAccountFile("/Users/joshk/.keys/keyfile.json"))
 	if err != nil {
 		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
 	}
 
 	// main logic loop
-Loop:
+Loop: //Named loop just like Swift
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
@@ -71,16 +69,31 @@ Loop:
 func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string, client *translate.Client) {
 
 	// Remove unneeded @mention string
-	targetStr := strings.TrimPrefix(msg.Text, prefix)
+	targetStr := []string{strings.TrimPrefix(msg.Text, prefix)}
+
+	langList, err := client.DetectLanguage(ctx, targetStr)
+	if err != nil {
+		fmt.Println("Could not detect language")
+		return
+	}
+
+	inLang := langList[0][0].Language
+	outLang := language.English
+
+	switch inLang {
+	case language.English:
+		outLang = language.Japanese
+	}
 
 	trns, err := client.Translate(
 		ctx,
-		[]string{targetStr},
-		language.Japanese,
+		targetStr,
+		outLang,
 		&translate.Options{
-			Source: language.English,
+			Source: inLang,
 			Format: translate.Text,
-		})
+		},
+	)
 
 	if err != nil {
 		fmt.Println("Could not translate")
