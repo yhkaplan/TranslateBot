@@ -3,7 +3,6 @@ package main
 import (
 	"context" // Context is available in the main lib from v1.7
 	"fmt"
-	"log" // For panic func, might delete later
 	"os"
 	"strings"
 
@@ -26,10 +25,11 @@ func main() {
 	// Set up google translate part
 	fmt.Println("Starting up translation service")
 	ctx = context.Background()
-	// TODO: any way to avoid absolut paths??
-	client, err := translate.NewClient(ctx, option.WithServiceAccountFile("/Users/joshk/.keys/keyfile.json"))
+	apiKey := os.Getenv("TRANSLATE_API_KEY")
+	client, err := translate.NewClient(ctx, option.WithAPIKey(apiKey))
 	if err != nil {
-		log.Panicln("Fatal error: %s", err) //TODO: is this best way to handle?
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	// main logic loop
@@ -78,11 +78,10 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string, client *tra
 	}
 
 	inLang := langList[0][0].Language
-	outLang := language.English
+	outLang := language.English //TODO: make this settable w/ envar or flag
 
-	switch inLang {
-	case language.English:
-		outLang = language.Japanese
+	if inLang == language.English {
+		outLang = language.Japanese //TODO: make this settable w/ envar or flag
 	}
 
 	trns, err := client.Translate(
