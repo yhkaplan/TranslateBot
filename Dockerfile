@@ -5,7 +5,7 @@ ENTRYPOINT []
 RUN apt-get update && \
     apt-get -qy install curl ca-certificates
 
-ADD TranslateBot TranslateBot
-RUN chmod +x TranslateBot
+ADD translatebot translatebot
+RUN chmod +x translatebot
 
-CMD ["./TranslateBot"]
+CMD ["./translatebot"]
